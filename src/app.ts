@@ -1,17 +1,17 @@
 import express, { Application, Request, Response } from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+import heathRoute from "./routes/health.route"
 
-dotenv.config();
+
 
 const app: Application = express();
+
 
 //middlewares
 app.use(cors());
 app.use(express.json());
 
-//test route
-app.get("/", (req: Request, res: Response) => {
-  res.send("E-commerce API is runnig!");
-});
+//routes 
+app.use("/api/health",heathRoute)
+
 export default app;
