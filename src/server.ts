@@ -8,6 +8,8 @@ import "./models/Cart";
 import "./models/CartItem";
 import "./models/OrderItem";
 
+
+
 dotenv.config();
 const PORT = process.env.PORT || 5000;
 
@@ -16,7 +18,7 @@ async function startServer() {
     await sequelize.authenticate();
     console.log("database connect successfully");
     await sequelize.sync({ alter: true });
-    console.log("all models synced to db")
+    console.log("all models synced to db");
     app.listen(PORT, () => {
       console.log(`server running on port ${PORT}`);
     });
