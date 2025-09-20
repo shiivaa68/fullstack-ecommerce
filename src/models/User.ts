@@ -6,7 +6,7 @@ interface UserAttributes {
   name: string;
   email: string;
   password: string;
-  role: "customer" | "admin";
+  role: "user" | "admin";
 }
 
 interface UserCreationAttributes
@@ -20,7 +20,7 @@ class User
   public name!: string;
   public email!: string;
   public password!: string;
-  public role!: "customer" | "admin";
+  public role!: "user" | "admin";
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -47,7 +47,7 @@ User.init(
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM("customer", "admin"),
+      type: DataTypes.ENUM("user", "admin"),
       defaultValue: "customer",
     },
   },
