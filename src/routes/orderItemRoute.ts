@@ -1,60 +1,59 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import OrderItem from "../models/OrderItem";
+import Order from "../models/Order";
+import { authenticate, AuthRequest } from "../middlewares/auth";
+import Product from "../models/Product";
+
 
 const router = Router();
 
-// Get all order items
-router.get("/", async (_req: Request, res: Response) => {
+// Add item to order
+router.post("/", authenticate, async (req: AuthRequest, res) => {
   try {
-    const items = await OrderItem.findAll();
-    res.json(items);
-  } catch {
-    res.status(500).json({ error: "Failed to fetch order items" });
+    const { orderId, productId, quantity } = req.body;
+
+    const order = await Order.findOne({ where: { id: orderId, userId: req.user.id } });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    const product = await Product.findByPk(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const orderItem = await OrderItem.create({
+      orderId,
+      productId,
+      quantity,
+      price: product.price, // ✅ freeze product price
+    });
+
+    res.json(orderItem);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 });
 
-// Get order item by id
-router.get("/:id", async (req: Request, res: Response) => {
-  try {
-    const item = await OrderItem.findByPk(req.params.id);
-    item ? res.json(item) : res.status(404).json({ error: "OrderItem not found" });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch order item" });
-  }
-});
+// Get items of an order
+router.get("/:orderId", authenticate, async (req: AuthRequest, res) => {
+  const order = await Order.findOne({ where: { id: req.params.orderId, userId: req.user.id } });
+  if (!order) return res.status(404).json({ error: "Order not found" });
 
-// Create new order item
-router.post("/", async (req: Request, res: Response) => {
-  try {
-    const newItem = await OrderItem.create(req.body);
-    res.status(201).json(newItem);
-  } catch {
-    res.status(500).json({ error: "Failed to create order item" });
-  }
+  const items = await OrderItem.findAll({ where: { orderId: req.params.orderId } });
+  res.json(items);
 });
 
 // Update order item
-router.put("/:id", async (req: Request, res: Response) => {
-  try {
-    const item = await OrderItem.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ error: "OrderItem not found" });
-    await item.update(req.body);
-    res.json(item);
-  } catch {
-    res.status(500).json({ error: "Failed to update order item" });
-  }
+router.put("/:id", authenticate, async (req: AuthRequest, res) => {
+  const orderItem = await OrderItem.findByPk(req.params.id);
+  if (!orderItem) return res.status(404).json({ error: "Order item not found" });
+  await orderItem.update(req.body);
+  res.json(orderItem);
 });
 
 // Delete order item
-router.delete("/:id", async (req: Request, res: Response) => {
-  try {
-    const item = await OrderItem.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ error: "OrderItem not found" });
-    await item.destroy();
-    res.json({ message: "OrderItem deleted" });
-  } catch {
-    res.status(500).json({ error: "Failed to delete order item" });
-  }
+router.delete("/:id", authenticate, async (req: AuthRequest, res) => {
+  const orderItem = await OrderItem.findByPk(req.params.id);
+  if (!orderItem) return res.status(404).json({ error: "Order item not found" });
+  await orderItem.destroy();
+  res.json({ message: "Order item deleted" });
 });
 
 export default router;

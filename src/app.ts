@@ -9,6 +9,7 @@ import orderRoute from "./routes/orderRouters";
 import cartRoute from "./routes/cartRoute";
 import cartItemRoute from "./routes/cartItemRoute";
 import orderItemRoute from "./routes/orderItemRoute";
+import authRoutes from "./routes/authRoute"
 
 const app: Application = express();
 
@@ -24,5 +25,7 @@ app.use("/api/orders", orderRoute);
 app.use("/api/carts", cartRoute);
 app.use("/api/cart-items", cartItemRoute);
 app.use("/api/order-items", orderItemRoute);
+app.use("/api/auth", authRoutes);
+
 
 export default app;

@@ -1,60 +1,47 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
 import CartItem from "../models/CartItem";
+import Cart from "../models/Cart";
+import { authenticate, AuthRequest } from "../middlewares/auth";
 
 const router = Router();
 
-// Get all cart items
-router.get("/", async (_req: Request, res: Response) => {
+// Add item to cart
+router.post("/", authenticate, async (req: AuthRequest, res) => {
   try {
-    const items = await CartItem.findAll();
-    res.json(items);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch cart items" });
+    const { cartId, productId, quantity } = req.body;
+    const cart = await Cart.findOne({ where: { id: cartId, userId: req.user.id } });
+    if (!cart) return res.status(404).json({ error: "Cart not found" });
+
+    const cartItem = await CartItem.create({ cartId, productId, quantity });
+    res.json(cartItem);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 });
 
-// Get cart item by id
-router.get("/:id", async (req: Request, res: Response) => {
-  try {
-    const item = await CartItem.findByPk(req.params.id);
-    item ? res.json(item) : res.status(404).json({ error: "CartItem not found" });
-  } catch {
-    res.status(500).json({ error: "Failed to fetch cart item" });
-  }
-});
+// Get items of a cart
+router.get("/:cartId", authenticate, async (req: AuthRequest, res) => {
+  const cart = await Cart.findOne({ where: { id: req.params.cartId, userId: req.user.id } });
+  if (!cart) return res.status(404).json({ error: "Cart not found" });
 
-// Add new cart item
-router.post("/", async (req: Request, res: Response) => {
-  try {
-    const newItem = await CartItem.create(req.body);
-    res.status(201).json(newItem);
-  } catch {
-    res.status(500).json({ error: "Failed to create cart item" });
-  }
+  const items = await CartItem.findAll({ where: { cartId: req.params.cartId } });
+  res.json(items);
 });
 
 // Update cart item
-router.put("/:id", async (req: Request, res: Response) => {
-  try {
-    const item = await CartItem.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ error: "CartItem not found" });
-    await item.update(req.body);
-    res.json(item);
-  } catch {
-    res.status(500).json({ error: "Failed to update cart item" });
-  }
+router.put("/:id", authenticate, async (req: AuthRequest, res) => {
+  const cartItem = await CartItem.findByPk(req.params.id);
+  if (!cartItem) return res.status(404).json({ error: "Cart item not found" });
+  await cartItem.update(req.body);
+  res.json(cartItem);
 });
 
 // Delete cart item
-router.delete("/:id", async (req: Request, res: Response) => {
-  try {
-    const item = await CartItem.findByPk(req.params.id);
-    if (!item) return res.status(404).json({ error: "CartItem not found" });
-    await item.destroy();
-    res.json({ message: "CartItem deleted" });
-  } catch {
-    res.status(500).json({ error: "Failed to delete cart item" });
-  }
+router.delete("/:id", authenticate, async (req: AuthRequest, res) => {
+  const cartItem = await CartItem.findByPk(req.params.id);
+  if (!cartItem) return res.status(404).json({ error: "Cart item not found" });
+  await cartItem.destroy();
+  res.json({ message: "Cart item deleted" });
 });
 
 export default router;
