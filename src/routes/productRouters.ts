@@ -4,16 +4,20 @@ import { requireRole } from "../middlewares/roleMiddleware";
 import { productValidator } from "../validators/productValidator";
 import { validate } from "../middlewares/validate";
 import { catchAsync } from "../utils/catchAsync";
+import AppError from "../utils/AppError";
 
 const router = Router();
 
-// Get all products // public
-router.get("/", async (_, res) => {
-  const products = await Product.findAll();
-  res.json(products);
-});
+// Get all products
+router.get(
+  "/",
+  catchAsync(async (_req: Request, res: Response) => {
+    const products = await Product.findAll();
+    res.json(products);
+  })
+);
 
-// Create product admin only
+// Create product (admin only)
 router.post(
   "/",
   requireRole(["admin"]),
@@ -25,26 +29,40 @@ router.post(
   })
 );
 
-// Get single product //public
-router.get("/:id", async (req, res) => {
-  const product = await Product.findByPk(req.params.id);
-  if (!product) return res.status(404).json({ error: "Product not found" });
-  res.json(product);
-});
+// Get single product
+router.get(
+  "/:id",
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) throw new AppError("Product not found", 404);
+    res.json(product);
+  })
+);
 
-// Update product //admin
-router.put("/:id", requireRole(["admin"]), async (req, res) => {
-  const product = await Product.findByPk(req.params.id);
-  if (!product) return res.status(404).json({ error: "Product not found" });
-  await product.update(req.body);
-  res.json(product);
-});
-// Delete product //admin
-router.delete("/:id", requireRole(["admin"]), async (req, res) => {
-  const product = await Product.findByPk(req.params.id);
-  if (!product) return res.status(404).json({ error: "Product not found" });
-  await product.destroy();
-  res.json({ message: "Product deleted" });
-});
+// Update product
+router.put(
+  "/:id",
+  requireRole(["admin"]),
+  productValidator,
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) throw new AppError("Product not found", 404);
+    await product.update(req.body);
+    res.json(product);
+  })
+);
+
+// Delete product
+router.delete(
+  "/:id",
+  requireRole(["admin"]),
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) throw new AppError("Product not found", 404);
+    await product.destroy();
+    res.json({ message: "Product deleted" });
+  })
+);
 
 export default router;

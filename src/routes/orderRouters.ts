@@ -1,46 +1,64 @@
-import { Router } from "express";
+import { Router, Response } from "express";
 import Order from "../models/Order";
 import { authenticate, AuthRequest } from "../middlewares/auth";
+import { catchAsync } from "../utils/catchAsync";
+import AppError from "../utils/AppError";
 
 const router = Router();
 
 // Create order
-router.post("/", authenticate, async (req: AuthRequest, res) => {
-  try {
+router.post(
+  "/",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
     const order = await Order.create({ ...req.body, userId: req.user.id });
     res.json(order);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  })
+);
 
 // Get all orders for logged-in user
-router.get("/", authenticate, async (req: AuthRequest, res) => {
-  const orders = await Order.findAll({ where: { userId: req.user.id } });
-  res.json(orders);
-});
+router.get(
+  "/",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const orders = await Order.findAll({ where: { userId: req.user.id } });
+    res.json(orders);
+  })
+);
 
 // Get single order
-router.get("/:id", authenticate, async (req: AuthRequest, res) => {
-  const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
-  if (!order) return res.status(404).json({ error: "Order not found" });
-  res.json(order);
-});
+router.get(
+  "/:id",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!order) throw new AppError("Order not found", 404);
+    res.json(order);
+  })
+);
 
 // Update order
-router.put("/:id", authenticate, async (req: AuthRequest, res) => {
-  const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
-  if (!order) return res.status(404).json({ error: "Order not found" });
-  await order.update(req.body);
-  res.json(order);
-});
+router.put(
+  "/:id",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!order) throw new AppError("Order not found", 404);
+    await order.update(req.body);
+    res.json(order);
+  })
+);
 
 // Delete order
-router.delete("/:id", authenticate, async (req: AuthRequest, res) => {
-  const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
-  if (!order) return res.status(404).json({ error: "Order not found" });
-  await order.destroy();
-  res.json({ message: "Order deleted" });
-});
+router.delete(
+  "/:id",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const order = await Order.findOne({ where: { id: req.params.id, userId: req.user.id } });
+    if (!order) throw new AppError("Order not found", 404);
+    await order.destroy();
+    res.json({ message: "Order deleted" });
+  })
+);
 
 export default router;

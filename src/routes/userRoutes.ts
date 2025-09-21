@@ -1,44 +1,68 @@
-import { Router } from "express";
-import User from "../models/User";
+import { Router, Request, Response } from "express";
+import Product from "../models/Product";
+import { requireRole } from "../middlewares/roleMiddleware";
+import { productValidator } from "../validators/productValidator";
+import { validate } from "../middlewares/validate";
+import { catchAsync } from "../utils/catchAsync";
+import AppError from "../utils/AppError";
 
 const router = Router();
 
-// Create user
-router.post("/", async (req, res) => {
-  try {
-    const user = await User.create(req.body);
-    res.json(user);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+// Get all products
+router.get(
+  "/",
+  catchAsync(async (_req: Request, res: Response) => {
+    const products = await Product.findAll();
+    res.json(products);
+  })
+);
 
-//Get all users
-router.get("/", async (_, res) => {
-  const users = await User.findAll();
-  res.json(users);
-});
+// Create product (admin only)
+router.post(
+  "/",
+  requireRole(["admin"]),
+  productValidator,
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.create(req.body);
+    res.json(product);
+  })
+);
 
-// Get single user
-router.get("/:id", async (req, res) => {
-  const user = await User.findByPk(req.params.id);
-  if (!user) return res.status(404).json({ error: "User not found" });
-  res.json(user);
-});
-// Update user
-router.put("/:id", async (req, res) => {
-  const user = await User.findByPk(req.params.id);
-  if (!user) return res.status(404).json({ error: "User not found" });
-  await user.update(req.body);
-  res.json(user);
-});
+// Get single product
+router.get(
+  "/:id",
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) throw new AppError("Product not found", 404);
+    res.json(product);
+  })
+);
 
-// Delete user
-router.delete("/:id", async (req, res) => {
-  const user = await User.findByPk(req.params.id);
-  if (!user) return res.status(404).json({ error: "User not found" });
-  await user.destroy();
-  res.json({ message: "User deleted" });
-});
+// Update product
+router.put(
+  "/:id",
+  requireRole(["admin"]),
+  productValidator,
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) throw new AppError("Product not found", 404);
+    await product.update(req.body);
+    res.json(product);
+  })
+);
+
+// Delete product
+router.delete(
+  "/:id",
+  requireRole(["admin"]),
+  catchAsync(async (req: Request, res: Response) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) throw new AppError("Product not found", 404);
+    await product.destroy();
+    res.json({ message: "Product deleted" });
+  })
+);
 
 export default router;
