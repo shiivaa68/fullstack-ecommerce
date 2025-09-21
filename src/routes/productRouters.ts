@@ -1,6 +1,9 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import Product from "../models/Product";
 import { requireRole } from "../middlewares/roleMiddleware";
+import { productValidator } from "../validators/productValidator";
+import { validate } from "../middlewares/validate";
+import { catchAsync } from "../utils/catchAsync";
 
 const router = Router();
 
@@ -11,14 +14,16 @@ router.get("/", async (_, res) => {
 });
 
 // Create product admin only
-router.post("/", requireRole(["admin"]), async (req, res) => {
-  try {
+router.post(
+  "/",
+  requireRole(["admin"]),
+  productValidator,
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
     const product = await Product.create(req.body);
     res.json(product);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  })
+);
 
 // Get single product //public
 router.get("/:id", async (req, res) => {
