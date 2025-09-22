@@ -1,22 +1,25 @@
-import { Router } from "express";
+import { Router, Response } from "express";
 import OrderItem from "../models/OrderItem";
 import Order from "../models/Order";
-import { authenticate, AuthRequest } from "../middlewares/auth";
 import Product from "../models/Product";
-
+import { authenticate, AuthRequest } from "../middlewares/auth";
+import { catchAsync } from "../utils/catchAsync";
+import AppError from "../utils/AppError";
 
 const router = Router();
 
 // Add item to order
-router.post("/", authenticate, async (req: AuthRequest, res) => {
-  try {
+router.post(
+  "/",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
     const { orderId, productId, quantity } = req.body;
 
     const order = await Order.findOne({ where: { id: orderId, userId: req.user.id } });
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) throw new AppError("Order not found", 404);
 
     const product = await Product.findByPk(productId);
-    if (!product) return res.status(404).json({ error: "Product not found" });
+    if (!product) throw new AppError("Product not found", 404);
 
     const orderItem = await OrderItem.create({
       orderId,
@@ -26,34 +29,46 @@ router.post("/", authenticate, async (req: AuthRequest, res) => {
     });
 
     res.json(orderItem);
-  } catch (err: any) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  })
+);
 
 // Get items of an order
-router.get("/:orderId", authenticate, async (req: AuthRequest, res) => {
-  const order = await Order.findOne({ where: { id: req.params.orderId, userId: req.user.id } });
-  if (!order) return res.status(404).json({ error: "Order not found" });
+router.get(
+  "/:orderId",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const order = await Order.findOne({ where: { id: req.params.orderId, userId: req.user.id } });
+    if (!order) throw new AppError("Order not found", 404);
 
-  const items = await OrderItem.findAll({ where: { orderId: req.params.orderId } });
-  res.json(items);
-});
+    const items = await OrderItem.findAll({ where: { orderId: req.params.orderId } });
+    res.json(items);
+  })
+);
 
 // Update order item
-router.put("/:id", authenticate, async (req: AuthRequest, res) => {
-  const orderItem = await OrderItem.findByPk(req.params.id);
-  if (!orderItem) return res.status(404).json({ error: "Order item not found" });
-  await orderItem.update(req.body);
-  res.json(orderItem);
-});
+router.put(
+  "/:id",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const orderItem = await OrderItem.findByPk(req.params.id);
+    if (!orderItem) throw new AppError("Order item not found", 404);
+
+    await orderItem.update(req.body);
+    res.json(orderItem);
+  })
+);
 
 // Delete order item
-router.delete("/:id", authenticate, async (req: AuthRequest, res) => {
-  const orderItem = await OrderItem.findByPk(req.params.id);
-  if (!orderItem) return res.status(404).json({ error: "Order item not found" });
-  await orderItem.destroy();
-  res.json({ message: "Order item deleted" });
-});
+router.delete(
+  "/:id",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const orderItem = await OrderItem.findByPk(req.params.id);
+    if (!orderItem) throw new AppError("Order item not found", 404);
+
+    await orderItem.destroy();
+    res.json({ message: "Order item deleted" });
+  })
+);
 
 export default router;
