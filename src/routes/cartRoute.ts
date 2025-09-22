@@ -3,13 +3,15 @@ import Cart from "../models/Cart";
 import { authenticate, AuthRequest } from "../middlewares/auth";
 import { catchAsync } from "../utils/catchAsync";
 import AppError from "../utils/AppError";
+import {validate} from "../middlewares/validate"
+import { cartValidator } from "../validators/cartValidator";
 
 const router = Router();
 
 // Create cart (requires login)
 router.post(
   "/",
-  authenticate,
+  authenticate,cartValidator,validate,
   catchAsync(async (req: AuthRequest, res: Response) => {
     const cart = await Cart.create({ userId: req.user.id });
     res.json(cart);

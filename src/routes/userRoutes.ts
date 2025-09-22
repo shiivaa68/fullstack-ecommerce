@@ -1,67 +1,72 @@
 import { Router, Request, Response } from "express";
-import Product from "../models/Product";
-import { requireRole } from "../middlewares/roleMiddleware";
-import { productValidator } from "../validators/productValidator";
+import User from "../models/User";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { registerValidator, loginValidator, updateUserValidator } from "../validators/userValidator";
 import { validate } from "../middlewares/validate";
 import { catchAsync } from "../utils/catchAsync";
 import AppError from "../utils/AppError";
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
-// Get all products
-router.get(
-  "/",
-  catchAsync(async (_req: Request, res: Response) => {
-    const products = await Product.findAll();
-    res.json(products);
-  })
-);
-
-// Create product (admin only)
+// ✅ Register
 router.post(
-  "/",
-  requireRole(["admin"]),
-  productValidator,
+  "/register",
+  registerValidator,
   validate,
   catchAsync(async (req: Request, res: Response) => {
-    const product = await Product.create(req.body);
-    res.json(product);
+    const { name, email, password } = req.body;
+
+    const existing = await User.findOne({ where: { email } });
+    if (existing) throw new AppError("Email already in use", 400);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, email, password: hashedPassword, role: "user" });
+
+    res.status(201).json({ message: "User registered", user: { id: user.id, name: user.name, email: user.email } });
   })
 );
 
-// Get single product
-router.get(
-  "/:id",
+// ✅ Login
+router.post(
+  "/login",
+  loginValidator,
+  validate,
   catchAsync(async (req: Request, res: Response) => {
-    const product = await Product.findByPk(req.params.id);
-    if (!product) throw new AppError("Product not found", 404);
-    res.json(product);
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) throw new AppError("Invalid credentials", 401);
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new AppError("Invalid credentials", 401);
+
+    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: "1d" });
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    });
   })
 );
 
-// Update product
+// ✅ Update user
 router.put(
   "/:id",
-  requireRole(["admin"]),
-  productValidator,
+  updateUserValidator,
   validate,
   catchAsync(async (req: Request, res: Response) => {
-    const product = await Product.findByPk(req.params.id);
-    if (!product) throw new AppError("Product not found", 404);
-    await product.update(req.body);
-    res.json(product);
-  })
-);
+    const user = await User.findByPk(req.params.id);
+    if (!user) throw new AppError("User not found", 404);
 
-// Delete product
-router.delete(
-  "/:id",
-  requireRole(["admin"]),
-  catchAsync(async (req: Request, res: Response) => {
-    const product = await Product.findByPk(req.params.id);
-    if (!product) throw new AppError("Product not found", 404);
-    await product.destroy();
-    res.json({ message: "Product deleted" });
+    if (req.body.password) {
+      req.body.password = await bcrypt.hash(req.body.password, 10);
+    }
+
+    await user.update(req.body);
+    res.json({ message: "User updated", user });
   })
 );
 

@@ -1,4 +1,5 @@
-import { DataType, DataTypes, Model, Optional } from "sequelize";
+// models/User.ts
+import { DataTypes, Model, Optional } from "sequelize";
 import sequelize from "../config/database";
 
 interface UserAttributes {
@@ -9,53 +10,25 @@ interface UserAttributes {
   role: "user" | "admin";
 }
 
-interface UserCreationAttributes
-  extends Optional<UserAttributes, "id" | "role"> {}
+interface UserCreationAttributes extends Optional<UserAttributes, "id" | "role"> {}
 
-class User
-  extends Model<UserAttributes, UserCreationAttributes>
-  implements UserAttributes
-{
+class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
   public name!: string;
   public email!: string;
   public password!: string;
   public role!: "user" | "admin";
-
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
 }
 
 User.init(
   {
-    id: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    email: {
-      type: DataTypes.STRING,
-      unique: true,
-      allowNull: false,
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    role: {
-      type: DataTypes.ENUM("user", "admin"),
-      defaultValue: "customer",
-    },
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+    password: { type: DataTypes.STRING, allowNull: false },
+    role: { type: DataTypes.ENUM("user", "admin"), defaultValue: "user" },
   },
-  {
-    sequelize,
-    modelName: "User",
-    tableName: "users",
-  }
+  { sequelize, modelName: "user" }
 );
 
 export default User;

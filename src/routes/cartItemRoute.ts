@@ -1,14 +1,16 @@
-import { Router } from "express";
+import { Router,Response } from "express";
 import OrderItem from "../models/OrderItem";
 import Order from "../models/Order";
 import { authenticate, AuthRequest } from "../middlewares/auth";
+import { cartItemValidator } from "../validators/cartItemValidator";
+import { validate } from "../middlewares/validate";
 import Product from "../models/Product";
 
 
 const router = Router();
 
 // Add item to order
-router.post("/", authenticate, async (req: AuthRequest, res) => {
+router.post("/", authenticate,cartItemValidator,validate, async (req: AuthRequest, res:Response) => {
   try {
     const { orderId, productId, quantity } = req.body;
 

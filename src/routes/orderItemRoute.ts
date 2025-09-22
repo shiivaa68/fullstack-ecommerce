@@ -3,6 +3,9 @@ import OrderItem from "../models/OrderItem";
 import Order from "../models/Order";
 import Product from "../models/Product";
 import { authenticate, AuthRequest } from "../middlewares/auth";
+import { orderItemValidator } from "../validators/orderItemValidator";
+import { validate } from "../middlewares/validate";
+
 import { catchAsync } from "../utils/catchAsync";
 import AppError from "../utils/AppError";
 
@@ -11,7 +14,7 @@ const router = Router();
 // Add item to order
 router.post(
   "/",
-  authenticate,
+  authenticate,orderItemValidator,validate,
   catchAsync(async (req: AuthRequest, res: Response) => {
     const { orderId, productId, quantity } = req.body;
 

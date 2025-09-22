@@ -1,6 +1,8 @@
 import { Router, Response } from "express";
 import Order from "../models/Order";
 import { authenticate, AuthRequest } from "../middlewares/auth";
+import { orderValidator } from "../validators/orderValidator"; 
+import { validate } from "../middlewares/validate";
 import { catchAsync } from "../utils/catchAsync";
 import AppError from "../utils/AppError";
 
@@ -9,7 +11,7 @@ const router = Router();
 // Create order
 router.post(
   "/",
-  authenticate,
+  authenticate,orderValidator,validate,
   catchAsync(async (req: AuthRequest, res: Response) => {
     const order = await Order.create({ ...req.body, userId: req.user.id });
     res.json(order);
