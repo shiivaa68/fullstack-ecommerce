@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
+import { config } from "../config/config";
 
-const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
+// const JWT_SECRET = process.env.JWT_SECRET || "supersecret";
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -50,9 +51,13 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Generate JWT
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      config.jwt.secret,
+      {
+        expiresIn: "1h",
+      }
+    );
 
     return res.json({ message: "Login successful", token });
   } catch (error) {
