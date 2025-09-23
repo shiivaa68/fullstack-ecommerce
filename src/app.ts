@@ -1,4 +1,6 @@
 import express, { Application } from "express";
+import morgan from "morgan";
+import logger from "./utils/logger";
 import cors from "cors";
 import { errorHandler } from "./middlewares/errorhandler";
 import heathRoute from "./routes/health.route";
