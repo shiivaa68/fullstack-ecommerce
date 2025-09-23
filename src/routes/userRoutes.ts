@@ -6,6 +6,8 @@ import { registerValidator, loginValidator, updateUserValidator } from "../valid
 import { validate } from "../middlewares/validate";
 import { catchAsync } from "../utils/catchAsync";
 import AppError from "../utils/AppError";
+import { requireRole } from "../middlewares/roleMiddleware";
+import { authenticate, AuthRequest } from "../middlewares/auth";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
@@ -24,7 +26,10 @@ router.post(
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword, role: "user" });
 
-    res.status(201).json({ message: "User registered", user: { id: user.id, name: user.name, email: user.email } });
+    res.status(201).json({
+      message: "User registered",
+      user: { id: user.id, name: user.name, email: user.email },
+    });
   })
 );
 
@@ -52,14 +57,50 @@ router.post(
   })
 );
 
-// ✅ Update user
+// ✅ Get all users (admin only)
+router.get(
+  "/",
+  authenticate,
+  requireRole(["admin"]),
+  catchAsync(async (_req: AuthRequest, res: Response) => {
+    const users = await User.findAll({ attributes: ["id", "name", "email", "role"] });
+    res.json(users);
+  })
+);
+
+// ✅ Get single user (admin or self)
+router.get(
+  "/:id",
+  authenticate,
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const user = await User.findByPk(req.params.id, {
+      attributes: ["id", "name", "email", "role"],
+    });
+    if (!user) throw new AppError("User not found", 404);
+
+    // Only admin or the user themselves
+    if (req.user.role !== "admin" && req.user.id !== user.id) {
+      throw new AppError("Forbidden", 403);
+    }
+
+    res.json(user);
+  })
+);
+
+// ✅ Update user (admin or self)
 router.put(
   "/:id",
+  authenticate,
   updateUserValidator,
   validate,
-  catchAsync(async (req: Request, res: Response) => {
+  catchAsync(async (req: AuthRequest, res: Response) => {
     const user = await User.findByPk(req.params.id);
     if (!user) throw new AppError("User not found", 404);
+
+    // Only admin or the user themselves
+    if (req.user.role !== "admin" && req.user.id !== user.id) {
+      throw new AppError("Forbidden", 403);
+    }
 
     if (req.body.password) {
       req.body.password = await bcrypt.hash(req.body.password, 10);
@@ -67,6 +108,20 @@ router.put(
 
     await user.update(req.body);
     res.json({ message: "User updated", user });
+  })
+);
+
+// ✅ Delete user (admin only)
+router.delete(
+  "/:id",
+  authenticate,
+  requireRole(["admin"]),
+  catchAsync(async (req: AuthRequest, res: Response) => {
+    const user = await User.findByPk(req.params.id);
+    if (!user) throw new AppError("User not found", 404);
+
+    await user.destroy();
+    res.json({ message: "User deleted" });
   })
 );
 

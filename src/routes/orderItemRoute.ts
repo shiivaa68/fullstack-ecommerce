@@ -1,20 +1,21 @@
 import { Router, Response } from "express";
 import OrderItem from "../models/OrderItem";
 import Order from "../models/Order";
-import Product from "../models/Product";
 import { authenticate, AuthRequest } from "../middlewares/auth";
-import { orderItemValidator } from "../validators/orderItemValidator";
+import { cartItemValidator } from "../validators/cartItemValidator";
 import { validate } from "../middlewares/validate";
-
+import Product from "../models/Product";
 import { catchAsync } from "../utils/catchAsync";
 import AppError from "../utils/AppError";
 
 const router = Router();
 
-// Add item to order
+// ✅ Add item to order
 router.post(
   "/",
-  authenticate,orderItemValidator,validate,
+  authenticate,
+  cartItemValidator,
+  validate,
   catchAsync(async (req: AuthRequest, res: Response) => {
     const { orderId, productId, quantity } = req.body;
 
@@ -28,14 +29,14 @@ router.post(
       orderId,
       productId,
       quantity,
-      price: product.price, // ✅ freeze product price
+      price: product.price, // freeze product price at time of purchase
     });
 
-    res.json(orderItem);
+    res.status(201).json(orderItem);
   })
 );
 
-// Get items of an order
+// ✅ Get items of an order
 router.get(
   "/:orderId",
   authenticate,
@@ -48,10 +49,12 @@ router.get(
   })
 );
 
-// Update order item
+// ✅ Update order item
 router.put(
   "/:id",
   authenticate,
+  cartItemValidator, // can reuse same validator (quantity required, etc.)
+  validate,
   catchAsync(async (req: AuthRequest, res: Response) => {
     const orderItem = await OrderItem.findByPk(req.params.id);
     if (!orderItem) throw new AppError("Order item not found", 404);
@@ -61,7 +64,7 @@ router.put(
   })
 );
 
-// Delete order item
+// ✅ Delete order item
 router.delete(
   "/:id",
   authenticate,
